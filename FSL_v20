@@ -1,0 +1,124 @@
+import os
+import zipfile
+
+PROJECT = "FSL"
+
+files = {
+    f"{PROJECT}/memory.py": """
+class Memory:
+    def __init__(self):
+        self.stack = []
+        self.heap = {}
+        self.next_id = 0
+
+    def alloc(self, value):
+        addr = self.next_id
+        self.heap[addr] = value
+        self.next_id += 1
+        return addr
+
+    def get(self, addr):
+        return self.heap.get(addr, None)
+
+    def free(self, addr):
+        if addr in self.heap:
+            del self.heap[addr]
+""",
+
+    f"{PROJECT}/gc.py": """
+class GC:
+    def __init__(self, memory):
+        self.memory = memory
+
+    def collect(self):
+        unused = [k for k, v in self.memory.heap.items() if v is None]
+        for k in unused:
+            del self.memory.heap[k]
+""",
+
+    f"{PROJECT}/vm.py": """
+from memory import Memory
+from gc import GC
+
+class VM:
+    def __init__(self, instructions=None, constants=None):
+        self.instructions = instructions or []
+        self.constants = constants or []
+        self.ip = 0
+
+        self.memory = Memory()
+        self.gc = GC(self.memory)
+        self.debug = False
+
+    def run(self):
+        while self.ip < len(self.instructions):
+            op, arg = self.instructions[self.ip]
+            self.ip += 1
+
+            if self.debug:
+                print(f"[FSL VM] {op} {arg}")
+
+            if op == "LOAD_CONST":
+                self.memory.stack.append(self.constants[arg])
+
+            elif op == "PRINT":
+                print(self.memory.stack.pop())
+
+            elif op == "STORE":
+                self.memory.heap[arg] = self.memory.stack.pop()
+
+            elif op == "LOAD":
+                self.memory.stack.append(self.memory.get(arg))
+
+            elif op == "GC":
+                self.gc.collect()
+""",
+
+    f"{PROJECT}/stdlib.py": """
+class StdLib:
+    def __init__(self):
+        self.modules = {
+            "core": {
+                "اطبع": print,
+            },
+            "math": {
+                "جمع": lambda a, b: a + b,
+                "طرح": lambda a, b: a - b,
+                "ضرب": lambda a, b: a * b,
+            }
+        }
+
+    def get(self, module, name):
+        return self.modules.get(module, {}).get(name)
+""",
+
+    f"{PROJECT}/main.py": """
+from vm import VM
+
+def main():
+    vm = VM(
+        instructions=[
+            ("LOAD_CONST", 0),
+            ("LOAD_CONST", 1),
+            ("PRINT", None)
+        ],
+        constants=["مرحبا من FSL V20", 0]
+    )
+
+    vm.run()
+
+if __name__ == "__main__":
+    main()
+""",
+
+    f"{PROJECT}/README.md": """
+# 🧠 FSL (Faisal Script Language)
+
+لغة برمجة عربية تجريبية مبنية من الصفر.
+
+---
+
+## 🚀 التشغيل
+
+```bash
+python main.py
